@@ -1,0 +1,15 @@
+# Core LangChain and LangGraph frameworks
+langgraph
+langchain
+langchain-core
+
+# LLM integration (for Gemini models)
+langchain-google-genai
+
+# HTTP server and A2A components
+fastapi
+uvicorn
+a2a-sdk[http-server]
+
+# Environment variables
+python-dotenv

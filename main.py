@@ -50,9 +50,17 @@ def call_router_agent(query: str) -> Dict[str, Any]:
         result = response.json()
         
         if "error" in result:
-            raise HTTPException(status_code=500, detail=result["error"])
+            error_info = result["error"]
+            error_msg = error_info.get("message", str(error_info)) if isinstance(error_info, dict) else str(error_info)
+            raise HTTPException(status_code=500, detail=error_msg)
         
-        return result.get("result", {})
+        # Extract result object from JSON-RPC response
+        result_data = result.get("result", {})
+        if not result_data:
+            # If no result, check if response itself is the result
+            result_data = result
+        
+        return result_data
     except requests.exceptions.RequestException as e:
         raise HTTPException(status_code=503, detail=f"Failed to connect to Router Agent: {e}")
 

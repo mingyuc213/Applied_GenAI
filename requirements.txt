@@ -2,15 +2,21 @@
 langgraph
 langchain
 langchain-core
+langgraph-api>=0.4.21
 
 # LLM integration (for Gemini models)
 langchain-google-genai
+google-generativeai>=0.8.5
+google-ai-generativelanguage==0.6.15
 
 # HTTP server and A2A components
 fastapi
 uvicorn
-a2a-sdk[http-server]
 requests
+
+# Security and cryptography (fix dependency conflicts)
+cryptography>=45.0.7,<47
+pyopenssl>=25.3.0
 
 # Environment variables
 python-dotenv

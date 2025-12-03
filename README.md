@@ -47,7 +47,16 @@ The system consists of three specialized A2A-compatible agents, each running as 
 
 ## 🛠️ Installation & Setup
 
-### 1. Create Virtual Environment
+### 1. Create Virtual Environment (Optional)
+You can use either conda or venv:
+
+**Option A: Using Conda (Recommended)**
+```bash
+conda create -n hw5 python=3.10
+conda activate hw5
+```
+
+**Option B: Using venv**
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate

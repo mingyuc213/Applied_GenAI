@@ -1,22 +1,19 @@
 # mcp_server.py - MCP Protocol Compliant Server
+# This implements an MCP server that exposes database tools via MCP protocol
+# Agents connect to this server using LangGraph's MCP client integration
 import sqlite3
 import os
-from typing import Optional, List, Dict, Any
+from typing import Dict, Any
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
 import uvicorn
 from dotenv import load_dotenv
 
-# Setup logging
-import logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("MCP_Server")
+load_dotenv()
 
 # --- Configuration ---
 DB_PATH = "support.db"
 PORT = 8000
 
-# Initialize FastAPI
 app = FastAPI(title="MCP Customer Support Server", version="1.0.0")
 
 # --- Database Helper ---
@@ -121,7 +118,6 @@ MCP_TOOLS = [
 ]
 
 # --- MCP Protocol Endpoints ---
-
 @app.get("/mcp/tools")
 def list_tools():
     """MCP: List available tools"""
@@ -133,8 +129,6 @@ def call_tool(request: Dict[str, Any]):
     tool_name = request.get("name")
     arguments = request.get("arguments", {})
     
-    logger.info(f"MCP call_tool request: tool_name={tool_name}, arguments={arguments}")
-    
     if tool_name == "get_customer":
         customer_id = arguments.get("customer_id")
         if not customer_id:
@@ -143,9 +137,7 @@ def call_tool(request: Dict[str, Any]):
         customer = conn.execute("SELECT * FROM customers WHERE id = ?", (customer_id,)).fetchone()
         conn.close()
         if not customer:
-            logger.warning(f"Customer {customer_id} not found in database")
             raise HTTPException(status_code=404, detail=f"Customer {customer_id} not found")
-        logger.info(f"Retrieved customer {customer_id}: {dict(customer).get('name', 'N/A')}")
         return {"result": dict(customer)}
     
     elif tool_name == "list_customers":
@@ -217,96 +209,14 @@ def call_tool(request: Dict[str, Any]):
         conn = get_db_connection()
         tickets = conn.execute("SELECT * FROM tickets WHERE customer_id = ?", (customer_id,)).fetchall()
         conn.close()
-        logger.info(f"Retrieved {len(tickets)} tickets for customer {customer_id}")
         return {"result": [dict(t) for t in tickets]}
     
     else:
-        logger.error(f"Unknown tool name requested: {tool_name}. Available tools: get_customer, list_customers, update_customer, create_ticket, get_customer_history")
-        raise HTTPException(status_code=404, detail=f"Tool '{tool_name}' not found. Available tools: get_customer, list_customers, update_customer, create_ticket, get_customer_history")
-
-# --- Legacy REST endpoints for backward compatibility ---
-@app.get("/mcp/get_customer/{customer_id}")
-def get_customer_rest(customer_id: int):
-    """Legacy REST endpoint"""
-    conn = get_db_connection()
-    customer = conn.execute("SELECT * FROM customers WHERE id = ?", (customer_id,)).fetchone()
-    conn.close()
-    if not customer:
-        raise HTTPException(status_code=404, detail="Customer not found")
-    return dict(customer)
-
-@app.get("/mcp/list_customers")
-def list_customers_rest(status: Optional[str] = None, limit: int = 10):
-    """Legacy REST endpoint"""
-    conn = get_db_connection()
-    query = "SELECT * FROM customers"
-    params = []
-    if status:
-        query += " WHERE status = ?"
-        params.append(status)
-    query += f" LIMIT {limit}"
-    customers = conn.execute(query, params).fetchall()
-    conn.close()
-    return [dict(c) for c in customers]
-
-@app.put("/mcp/update_customer/{customer_id}")
-def update_customer_rest(customer_id: int, data: Dict[str, Any]):
-    """Legacy REST endpoint"""
-    updates = {k: v for k, v in data.items() if v is not None}
-    if not updates:
-        return {"message": "No fields to update"}
-    
-    set_clauses = [f"{k} = ?" for k in updates.keys()]
-    query = f"UPDATE customers SET {', '.join(set_clauses)} WHERE id = ?"
-    params = list(updates.values()) + [customer_id]
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(query, params)
-    conn.commit()
-    rows = cursor.rowcount
-    conn.close()
-    
-    if rows == 0:
-        raise HTTPException(status_code=404, detail="Customer not found")
-    return {"status": "updated", "fields": updates}
-
-@app.post("/mcp/create_ticket")
-def create_ticket_rest(request: Dict[str, Any]):
-    """Legacy REST endpoint"""
-    customer_id = request.get("customer_id")
-    issue = request.get("issue")
-    priority = request.get("priority")
-    
-    if not all([customer_id, issue, priority]):
-        raise HTTPException(status_code=400, detail="customer_id, issue, and priority are required")
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    try:
-        cursor.execute(
-            "INSERT INTO tickets (customer_id, issue, status, priority) VALUES (?, ?, 'open', ?)",
-            (customer_id, issue, priority)
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Tool '{tool_name}' not found. Available tools: {[t['name'] for t in MCP_TOOLS]}"
         )
-        conn.commit()
-        tid = cursor.lastrowid
-        return {"status": "ticket_created", "ticket_id": tid}
-    except Exception as e:
-        conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        conn.close()
-
-@app.get("/mcp/get_customer_history/{customer_id}")
-def get_customer_history_rest(customer_id: int):
-    """Legacy REST endpoint"""
-    conn = get_db_connection()
-    tickets = conn.execute("SELECT * FROM tickets WHERE customer_id = ?", (customer_id,)).fetchall()
-    conn.close()
-    return [dict(t) for t in tickets]
 
 # --- Startup ---
 if __name__ == "__main__":
-    load_dotenv()
-    logger.info(f"Starting MCP Server on port {PORT}")
     uvicorn.run(app, host="0.0.0.0", port=PORT)

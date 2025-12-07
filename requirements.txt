@@ -1,0 +1,10 @@
+google-adk
+a2a-sdk
+fastmcp
+uvicorn
+httpx
+nest_asyncio
+termcolor
+python-dotenv
+google-generativeai
+requests

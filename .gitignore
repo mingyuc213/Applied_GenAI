@@ -1,0 +1,34 @@
+# --- Environment Variables (Crucial for Security) ---
+.env
+.env.local
+.env.*
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# --- Jupyter Notebooks ---
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# --- Database ---
+# Ignore the local SQLite database so you don't commit test data
+*.db
+*.sqlite3
+support.db
+
+# --- IDEs and Editors ---
+.vscode/
+.idea/
+*.swp
+
+# --- macOS ---
+.DS_Store
